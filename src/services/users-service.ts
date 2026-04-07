@@ -25,6 +25,16 @@ export interface LoginUserResponse {
   error?: string;
 }
 
+export interface GetCurrentUserResponse {
+  data?: {
+    id: number;
+    name: string;
+    email: string;
+    createdAt: Date | null;
+  };
+  error?: string;
+}
+
 export async function registerUser(request: RegisterUserRequest): Promise<RegisterUserResponse> {
   try {
     // Check if email already exists
@@ -78,6 +88,39 @@ export async function loginUser(request: LoginUserRequest): Promise<LoginUserRes
     return { data: token };
   } catch (error) {
     console.error('Error logging in user:', error);
+    return { error: 'Internal server error' };
+  }
+}
+
+export async function getCurrentUser(token: string): Promise<GetCurrentUserResponse> {
+  try {
+    // Find session by token
+    const sessionList = await db.select().from(sessions).where(eq(sessions.token, token)).limit(1);
+    if (sessionList.length === 0) {
+      return { error: 'Unauthorized' };
+    }
+
+    const session = sessionList[0];
+
+    // Get user by user_id from session
+    const userList = await db.select().from(users).where(eq(users.id, session.userId)).limit(1);
+    if (userList.length === 0) {
+      return { error: 'Unauthorized' };
+    }
+
+    const user = userList[0];
+
+    // Return user data without password
+    return {
+      data: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        createdAt: user.createdAt,
+      },
+    };
+  } catch (error) {
+    console.error('Error getting current user:', error);
     return { error: 'Internal server error' };
   }
 }
