@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
+import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db.js';
-import { users } from '../schema.js';
+import { users, sessions } from '../schema.js';
 import { eq } from 'drizzle-orm';
 
 export interface RegisterUserRequest {
@@ -9,7 +10,17 @@ export interface RegisterUserRequest {
   password: string;
 }
 
+export interface LoginUserRequest {
+  email: string;
+  password: string;
+}
+
 export interface RegisterUserResponse {
+  data?: string;
+  error?: string;
+}
+
+export interface LoginUserResponse {
   data?: string;
   error?: string;
 }
@@ -35,6 +46,38 @@ export async function registerUser(request: RegisterUserRequest): Promise<Regist
     return { data: 'OK' };
   } catch (error) {
     console.error('Error registering user:', error);
+    return { error: 'Internal server error' };
+  }
+}
+
+export async function loginUser(request: LoginUserRequest): Promise<LoginUserResponse> {
+  try {
+    // Find user by email
+    const userList = await db.select().from(users).where(eq(users.email, request.email)).limit(1);
+    if (userList.length === 0) {
+      return { error: 'Email atau password salah' };
+    }
+
+    const user = userList[0];
+
+    // Compare password with bcrypt hash
+    const passwordMatch = await bcrypt.compare(request.password, user.password);
+    if (!passwordMatch) {
+      return { error: 'Email atau password salah' };
+    }
+
+    // Generate UUID token
+    const token = uuidv4();
+
+    // Create session record
+    await db.insert(sessions).values({
+      token,
+      userId: user.id,
+    });
+
+    return { data: token };
+  } catch (error) {
+    console.error('Error logging in user:', error);
     return { error: 'Internal server error' };
   }
 }
