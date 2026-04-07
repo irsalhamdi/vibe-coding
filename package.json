@@ -1,0 +1,14 @@
+{
+  "name": "vibe-coding",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run src/server.ts",
+    "start": "bun run src/server.ts"
+  },
+  "dependencies": {
+    "elysia": "^1.4.28",
+    "drizzle-orm": "^0.45.2",
+    "mysql2": "^3.4.0"
+  }
+}
